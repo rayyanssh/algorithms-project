@@ -1,0 +1,11 @@
+{
+  "name": "algorithms-project",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools"
+      ]
+    }
+  },
+  "postStartCommand": "git pull --autostash"
+}
