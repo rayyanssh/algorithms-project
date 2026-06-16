@@ -6,6 +6,7 @@
 #include <climits>     
 #include <algorithm>   
 #include <limits>
+#include <map>
 using namespace std;
 
 
@@ -205,23 +206,22 @@ void handleUserInputDataset() {
 
 // ============================================================
 //  MODULE 4: Dynamic Programming - 0/1 Knapsack
-//  2. In main(), under case 6, replace the placeholder comment
-//     with:
-//         moduleResults[2] = runDPModule(taskDataset, availableStudyTime);
 // ============================================================
 
-// ---- Helper: scale double hours to integer units ----
-// The 0/1 Knapsack DP table requires integer weights.
-// We multiply every time value by SCALE so that 0.5-hour
-// steps are preserved (0.5h -> 1 unit, 1.0h -> 2 units, etc.)
-// This avoids losing fractional tasks like 1.5 or 2.5 hours.
+
 static const int DP_SCALE = 2; // 1 unit = 0.5 hours
 
+static int getVal(const vector<map<int,int>>& dp, int row, int col) {
+    auto it = dp[row].find(col);
+    return (it != dp[row].end()) ? it->second : 0;
+}
+
 // ---- Print the DP table (only when capacity <= 20 units) ----
-static void printDPTable(const vector<vector<int>>& dp,
+static void printDPTable(const vector<map<int,int>>& dp,
                          const vector<StudyTask>& tasks,
                          int capUnits) {
     int n = (int)tasks.size();
+
     cout << "\n  [DP Table — each cell = max importance achievable]\n";
     cout << "  Rows = tasks added one by one | Columns = time units (1 unit = 0.5 hr)\n\n";
 
@@ -237,8 +237,11 @@ static void printDPTable(const vector<vector<int>>& dp,
             cout << "  " << left << setw(6) << "(none)" << " |";
         else
             cout << "  " << left << setw(6) << tasks[i-1].id << " |";
+
+        // Print every column — getVal returns 0 if that coordinate
+        // was never stored in the map (meaning no improvement there)
         for (int w = 0; w <= capUnits; w++)
-            cout << setw(3) << dp[i][w];
+            cout << setw(3) << getVal(dp, i, w);
         cout << "\n";
     }
 }
@@ -262,24 +265,37 @@ AlgorithmResult runDPModule(const vector<StudyTask>& tasks, double availTime) {
     int n        = (int)tasks.size();
     int capUnits = (int)(availTime * DP_SCALE); // convert hours -> integer units
 
-    // --------------------------------------------------------
-    // Build the DP table
-    // dp[i][w] = maximum importance using first i tasks
-    //            with w time-units of capacity
-    // --------------------------------------------------------
-    clock_t startTime = clock();
+    //declare the map-based
+    vector<map<int,int>> dp(n + 1);
 
-    vector<vector<int>> dp(n + 1, vector<int>(capUnits + 1, 0));
+// Row 0 starts with one entry: 0 time used = 0 importance
+    dp[0][0] = 0;
 
-    for (int i = 1; i <= n; i++) {
-        int wt  = (int)(tasks[i-1].estimated_time * DP_SCALE); // task weight in units
-        int val = tasks[i-1].importance_score;
-        for (int w = 0; w <= capUnits; w++) {
-            dp[i][w] = dp[i-1][w];                    // skip task i
-            if (wt <= w) {                             // include task i if it fits
-                int withTask = dp[i-1][w - wt] + val;
-                if (withTask > dp[i][w])
-                    dp[i][w] = withTask;
+    //start clock
+   clock_t startTime = clock();
+
+    
+for (int i = 1; i <= n; i++) {
+    int wt  = (int)(tasks[i-1].estimated_time * DP_SCALE);
+    int val = tasks[i-1].importance_score;
+
+    // First carry forward everything from the row above
+    // (same as "skip this task" option)
+    dp[i] = dp[i-1];
+
+    // Then try adding this task to each existing coordinate
+    for (auto& [w, imp] : dp[i-1]) {
+            int newW   = w + wt;       // time after adding this task
+            int newImp = imp + val;    // importance after adding this task
+
+            // Only proceed if the new time fits within the budget
+            if (newW <= capUnits) {
+                // Only store if this is better than what is already
+                // recorded at this coordinate in the current row.
+                // This handles the case where two different paths
+                // reach the same time unit — we keep the best one.
+                if (getVal(dp, i, newW) < newImp)
+                    dp[i][newW] = newImp;
             }
         }
     }
@@ -290,23 +306,34 @@ AlgorithmResult runDPModule(const vector<StudyTask>& tasks, double availTime) {
     // --------------------------------------------------------
     // Print DP table (only if small enough to be readable)
     // --------------------------------------------------------
-    if (capUnits <= 20) {
+if (capUnits <= 20) {
         printDPTable(dp, tasks, capUnits);
     } else {
-        cout << "\n  [DP Table has " << (capUnits+1) << " columns — too wide to print here.]\n";
-        cout << "  Maximum importance achievable = " << dp[n][capUnits] << "\n";
+        cout << "\n  [DP Table has " << (capUnits + 1)
+             << " columns — too wide to display fully.]\n";
+    }
+//read final answer
+int bestImp = 0;
+    int bestW   = 0;
+    for (auto& [w, imp] : dp[n]) {
+        if (w <= capUnits && imp > bestImp) {
+            bestImp = imp;
+            bestW   = w;
+        }
     }
 
     // --------------------------------------------------------
     // Traceback: determine which tasks were selected
     // --------------------------------------------------------
-    vector<StudyTask> selected;
-    int w = capUnits;
+    ector<StudyTask> selected;
+    int w = bestW;
     for (int i = n; i >= 1; i--) {
-        if (dp[i][w] != dp[i-1][w]) {      // task i was included
+        if (getVal(dp, i, w) != getVal(dp, i-1, w)) {
+            // Task i was included
             selected.push_back(tasks[i-1]);
             w -= (int)(tasks[i-1].estimated_time * DP_SCALE);
         }
+        // If equal, task i was skipped — just move up a row
     }
     reverse(selected.begin(), selected.end()); // restore original order
 
@@ -323,12 +350,12 @@ AlgorithmResult runDPModule(const vector<StudyTask>& tasks, double availTime) {
     }
 
     // --------------------------------------------------------
-    // Print results table
+    // STEP 10: Print results table
     // --------------------------------------------------------
     cout << "\n  -------------------------------------------------------\n";
     cout << "   SELECTED TASKS (Optimal Combination by DP)\n";
     cout << "  -------------------------------------------------------\n";
-    cout << "  " << left << setw(5) << "ID"
+    cout << "  " << left << setw(5)  << "ID"
                          << setw(28) << "Task Name"
                          << setw(10) << "Time(hrs)"
                          << setw(12) << "Importance" << "\n";
@@ -348,9 +375,10 @@ AlgorithmResult runDPModule(const vector<StudyTask>& tasks, double availTime) {
     cout << "  " << string(55, '-') << "\n";
     cout << "  " << left << setw(33) << "TOTAL"
                          << setw(10) << totalTime
-                         << setw(12) << totalImp << "\n";
+                         << setw(12) << totalImp  << "\n";
     cout << "  " << string(55, '-') << "\n";
-    cout << "\n  Execution Time  : " << fixed << setprecision(4) << elapsedMs << " ms\n";
+    cout << "\n  Execution Time  : " << fixed << setprecision(4)
+         << elapsedMs << " ms\n";
     cout << "  Time Used       : " << fixed << setprecision(1)
          << totalTime << " / " << availTime << " hours\n";
     cout << "  Time Remaining  : " << (availTime - totalTime) << " hours\n";
@@ -358,9 +386,7 @@ AlgorithmResult runDPModule(const vector<StudyTask>& tasks, double availTime) {
     cout << "   of these tasks gives higher importance within the time limit.]\n";
     cout << "========================================================\n";
 
-    // --------------------------------------------------------
-    // Return AlgorithmResult for Module 6
-    // --------------------------------------------------------
+   
     return {"Dynamic Programming", selectedIDs, totalTime, totalImp, elapsedMs};
 }
 
