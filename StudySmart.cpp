@@ -649,11 +649,11 @@ Deadline tightness How close the deadlines are
 Importance variation Whether task importance scores are similar or very different
 */
 // ============================================================
-// MODULE 5: ML RECOMMENDATION MODULE
+// MODULE 5: AI RECOMMENDATION MODULE
 // ============================================================
-AlgorithmResult runMLModule(const vector<StudyTask>& tasks, double availableTime) {
+AlgorithmResult runAIModule(const vector<StudyTask>& tasks, double availableTime) {
     AlgorithmResult result;
-    result.strategy = "ML Recommendation";
+    result.strategy = "AI Recommendation";
     result.totalTime = 0.0;
     result.totalImportance = 0;
     result.executionTime = 0.0;
@@ -668,7 +668,7 @@ AlgorithmResult runMLModule(const vector<StudyTask>& tasks, double availableTime
 
     
     // Feature Extraction
-    // These are the extracted features for the ML model to make a recommendation.
+    // These are the extracted features for the AI model to make a recommendation.
     int numTasks = tasks.size();
     double totalRequiredTime = 0.0;
     double totalImportanceScore = 0.0;
@@ -719,14 +719,10 @@ AlgorithmResult runMLModule(const vector<StudyTask>& tasks, double availableTime
     auto end = high_resolution_clock::now();
     duration<double, milli> elapsed = end - start;
     result.executionTime = elapsed.count();
+ 
 
-    // --------------------------------------------------------
-    // 3. CONSOLE OUTPUT
-    // --------------------------------------------------------
     cout << fixed << setprecision(2);
-    cout << "\n==========================================================================\n";
-    cout << " MODULE 5: AI/ML RECOMMENDATION (Rule-Based Decision Tree)\n";
-    cout << "==========================================================================\n";
+    cout << " MODULE 5: AI RECOMMENDATION (Rule-Based Decision Tree)\n";
     cout << " Extracted Scenario Features:\n";
     cout << "  - Number of tasks       : " << numTasks << "\n";
     cout << "  - Required study time   : " << totalRequiredTime << " hrs\n";
@@ -735,9 +731,9 @@ AlgorithmResult runMLModule(const vector<StudyTask>& tasks, double availableTime
     cout << "  - Average importance    : " << averageImportance << "\n";
     cout << "  - Deadline tightness    : " << deadlineTightness * 100 << "% of tasks\n";
     cout << "  - Importance variation  : " << importanceVariation << "\n";
-    cout << "--------------------------------------------------------------------------\n";
+    printBar();
     cout << " >>> Recommended Strategy: " << recommendedStrategy << " <<<\n";
-    cout << "==========================================================================\n";
+    printBar();
 
     // Set the final result string to pass to Module 6
     result.strategy = "AI Prediction: " + recommendedStrategy;
@@ -775,12 +771,12 @@ void runComparisonModule(const vector<AlgorithmResult>& results, const string& s
         }
 
         // Format the selected task count or sequence
-        string taskCountStr = to_string(res.selectedTaskIDs.size()) + " tasks";
+        int taskCount = res.selectedTaskIDs.size();
         
         // Generate analytical commentary based on performance metrics
         string comment = "";
         if (res.strategy.find("Sorting") != string::npos) {
-            comment = "Prioritizes all tasks; ignores capacity constraint.";
+            comment = "Prioritizes all tasks.";
         } else if (res.strategy.find("Greedy") != string::npos) {
             comment = "Fast evaluation; approximate local optima resolution.";
         } else if (res.strategy.find("Dynamic Programming") != string::npos) {
@@ -790,8 +786,8 @@ void runComparisonModule(const vector<AlgorithmResult>& results, const string& s
         }
 
         cout << left 
-             << setw(35) << res.strategy 
-             << setw(15) << taskCountStr;
+             << setw(38) << res.strategy 
+             << setw(15) << taskCount;
              
         if (res.strategy.find("AI Prediction") != string::npos) {
             // AI prediction module simply identifies a target track; does not run calculations itself
@@ -815,21 +811,21 @@ void runComparisonModule(const vector<AlgorithmResult>& results, const string& s
 int main() {
     int choice = 0;
     
-    cout << "\n==================================================\n";
+    printBar('=');
     cout << "         WELCOME TO THE STUDYSMART AI SYSTEM      \n";
-    cout << "==================================================\n";
+    printBar('=');
 
     while (choice != 9) {
-        cout << "\n==================================================\n";
+        printBar();
         cout << "                 MAIN APPLICATION MENU            \n";
-        cout << "==================================================\n";
+        printBar();
         cout << "1. Load Built-In Scenarios (Generated Data)\n";
         cout << "2. Input Custom Scenario Manually (User Input)\n";
         cout << "3. View Loaded Task Data Table\n";
         cout << "4. Run Sorting using Quick Sort.\n";
         cout << "5. Run Greedy Planning Module\n";
         cout << "6. Run Dynamic Programming Module \n";
-        cout << "7. AI/ML Recommendation Module\n";
+        cout << "7. AI Recommendation Module\n";
         cout << "8. Performance Comparison Module\n";
         cout << "9. Exit Application\n";
         cout << "--------------------------------------------------\n";
@@ -864,8 +860,8 @@ int main() {
                 
                 break;
             case 7:
-                cout << "\n[-->] Executing Module 5 (ML Recommendation)...\n";
-                moduleResults[3] = runMLModule(taskDataset, availableStudyTime);
+                cout << "\n[-->] Executing Module 5 (AI Recommendation)...\n";
+                moduleResults[3] = runAIModule(taskDataset, availableStudyTime);
                 break;
             case 8:
                 cout << "\n[-->] Executing Module 6 (Performance Comparison)...\n";
