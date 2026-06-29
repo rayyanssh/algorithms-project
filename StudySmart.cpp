@@ -788,12 +788,11 @@ void runComparisonModule(const vector<AlgorithmResult>& results, const string& s
         } else if (res.strategy.find("AI Prediction") != string::npos) {
             comment = "Evaluated contextual scenario metadata.";
         }
-
+        cout << fixed << setprecision(2);
         cout << left 
              << setw(38) << res.strategy 
-             << setw(15) << taskCount;
-             
-        cout << setw(15) << res.totalTime
+             << setw(15) << taskCount
+             << setw(15) << res.totalTime
              << setw(18) << res.totalImportance;
         
         cout << fixed << setprecision(4) 
